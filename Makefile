@@ -32,6 +32,7 @@ include $(DEVKITPRO)/wut/share/wut_rules
 #-------------------------------------------------------------------------------
 TARGET		:=	app
 BUILD		:=	build
+DIST		:=	dist
 SOURCES		:=	source
 DATA		:=	data
 INCLUDES	:=	include
@@ -68,7 +69,8 @@ LIBDIRS	:= $(PORTLIBS) $(WUT_ROOT)
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 #-------------------------------------------------------------------------------
 
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
+export OUTDIR	:=	$(CURDIR)/$(DIST)
+export OUTPUT	:=	$(CURDIR)/$(DIST)/$(TARGET)
 export TOPDIR	:=	$(CURDIR)
 
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
@@ -134,7 +136,7 @@ else ifneq (,$(wildcard $(TOPDIR)/splash.png))
 	export APP_DRC_SPLASH := $(TOPDIR)/splash.png
 endif
 
-.PHONY: $(BUILD) clean all
+.PHONY: $(BUILD) $(OUTDIR) clean all
 
 #-------------------------------------------------------------------------------
 all: $(BUILD)
@@ -146,7 +148,7 @@ $(BUILD):
 #-------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).wuhb $(TARGET).rpx $(TARGET).elf
+	@rm -fr $(BUILD) $(OUTDIR)
 
 #-------------------------------------------------------------------------------
 else
@@ -159,9 +161,12 @@ DEPENDS	:=	$(OFILES:.o=.d)
 #-------------------------------------------------------------------------------
 all	:	$(OUTPUT).wuhb
 
-$(OUTPUT).wuhb	:	$(OUTPUT).rpx
-$(OUTPUT).rpx	:	$(OUTPUT).elf
-$(OUTPUT).elf	:	$(OFILES)
+$(OUTDIR):
+	mkdir -p $@
+
+$(OUTPUT).wuhb	:	$(OUTDIR) $(OUTPUT).rpx
+$(OUTPUT).rpx	:	$(OUTDIR) $(OUTPUT).elf
+$(OUTPUT).elf	:	$(OUTDIR) $(OFILES)
 
 $(OFILES_SRC)	: $(HFILES_BIN)
 
