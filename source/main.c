@@ -5,6 +5,9 @@
 #include <whb/log_console.h>
 #include <whb/proc.h>
 
+#include <arpa/inet.h>
+#include "mdns_ipv4_shim.h"
+
 int
 main(int argc, char **argv)
 {
