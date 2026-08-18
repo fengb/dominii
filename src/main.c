@@ -1,13 +1,9 @@
-#include "logger.h"
 #include <coreinit/filesystem.h>
-#include <malloc.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include <wups.h>
 #include <wups/button_combo/api.h>
-#include <wups/config/WUPSConfigItemBoolean.h>
-#include <wups/config/WUPSConfigItemMultipleValues.h>
-#include <wups/config/WUPSConfigItemStub.h>
+
+#include "config.h"
+#include "logger.h"
 
 /**
     Mandatory plugin information.
@@ -19,7 +15,6 @@ WUPS_PLUGIN_VERSION("v0.1");
 WUPS_PLUGIN_AUTHOR("fengb");
 WUPS_PLUGIN_LICENSE("MIT");
 
-#define LOG_FS_OPEN_CONFIG_ID "logFSOpen"
 
 /**
     All of this defines can be used in ANY file.
@@ -30,115 +25,12 @@ WUPS_PLUGIN_LICENSE("MIT");
 WUPS_USE_WUT_DEVOPTAB();            // Use the wut devoptabs
 WUPS_USE_STORAGE("dominii"); // Unique id for the storage api
 
-bool logFSOpen                                                                = true;
 static WUPSButtonCombo_ComboHandle sPressDownButtonComboExampleHandle         = {};
 static WUPSButtonCombo_ComboHandle sPressDownObserverButtonComboExampleHandle = {};
 static WUPSButtonCombo_ComboHandle sHoldButtonComboExampleHandle              = {};
 static WUPSButtonCombo_ComboHandle sHoldObserverExButtonComboExampleHandle    = {};
 WUPSButtonCombo_Buttons DEFAULT_PRESS_DOWN_BUTTON_COMBO                       = WUPS_BUTTON_COMBO_BUTTON_L | WUPS_BUTTON_COMBO_BUTTON_R;
 WUPSButtonCombo_Buttons DEFAULT_PRESS_HOLD_COMBO                              = WUPS_BUTTON_COMBO_BUTTON_L | WUPS_BUTTON_COMBO_BUTTON_R | WUPS_BUTTON_COMBO_BUTTON_DOWN;
-
-/**
- * Callback that will be called if the config has been changed
- */
-void logFSOpenChanged(ConfigItemBoolean *item, bool newValue) {
-    DEBUG_FUNCTION_LINE_INFO("New value in logFSOpenChanged: %d", newValue);
-    logFSOpen = newValue;
-    // If the value has changed, we store it in the storage.
-    WUPSStorageAPI_StoreBool(NULL, LOG_FS_OPEN_CONFIG_ID, logFSOpen);
-}
-
-WUPSConfigAPICallbackStatus ConfigMenuOpenedCallback(WUPSConfigCategoryHandle root) {
-    {
-        // Let's create a new category called "Settings"
-        WUPSConfigCategoryHandle settingsCategory;
-        WUPSConfigAPICreateCategoryOptionsV1 settingsCategoryOptions = {.name = "Settings"};
-        if (WUPSConfigAPI_Category_Create(settingsCategoryOptions, &settingsCategory) !=
-            WUPSCONFIG_API_RESULT_SUCCESS) {
-            DEBUG_FUNCTION_LINE_ERR("Failed to create settings category");
-            return WUPSCONFIG_API_CALLBACK_RESULT_ERROR;
-        }
-
-        // Add a new item to this settings category
-        if (WUPSConfigItemBoolean_AddToCategory(settingsCategory, LOG_FS_OPEN_CONFIG_ID, "Log FSOpen calls", true,
-                                                logFSOpen, &logFSOpenChanged) != WUPSCONFIG_API_RESULT_SUCCESS) {
-            DEBUG_FUNCTION_LINE_ERR("Failed to add item to category");
-            return WUPSCONFIG_API_CALLBACK_RESULT_ERROR;
-        }
-
-        // Add the category to the root.
-        if (WUPSConfigAPI_Category_AddCategory(root, settingsCategory) != WUPSCONFIG_API_RESULT_SUCCESS) {
-            DEBUG_FUNCTION_LINE_ERR("Failed to add category to root item");
-        }
-    }
-    {
-        // We can also have categories inside categories!
-        WUPSConfigCategoryHandle categoryLevel1;
-        WUPSConfigAPICreateCategoryOptionsV1 catLev1Options = {.name = "Category with subcategory"};
-        if (WUPSConfigAPI_Category_Create(catLev1Options, &categoryLevel1) != WUPSCONFIG_API_RESULT_SUCCESS) {
-            DEBUG_FUNCTION_LINE_ERR("Failed to create categoryLevel1");
-            return WUPSCONFIG_API_CALLBACK_RESULT_ERROR;
-        }
-        WUPSConfigCategoryHandle categoryLevel2;
-        WUPSConfigAPICreateCategoryOptionsV1 catLev2Options = {.name = "Category inside category"};
-        if (WUPSConfigAPI_Category_Create(catLev2Options, &categoryLevel2) != WUPSCONFIG_API_RESULT_SUCCESS) {
-            DEBUG_FUNCTION_LINE_ERR("Failed to create categoryLevel1");
-            return WUPSCONFIG_API_CALLBACK_RESULT_ERROR;
-        }
-        if (WUPSConfigItemBoolean_AddToCategory(categoryLevel2, "stubInsideCategory",
-                                                "This is stub item inside a nested category", false, false,
-                                                NULL) != WUPSCONFIG_API_RESULT_SUCCESS) {
-            DEBUG_FUNCTION_LINE_ERR("Failed to add stub item to root category");
-            return WUPSCONFIG_API_CALLBACK_RESULT_ERROR;
-        }
-
-        // add categoryLevel2 to categoryLevel1
-        if (WUPSConfigAPI_Category_AddCategory(categoryLevel1, categoryLevel2) != WUPSCONFIG_API_RESULT_SUCCESS) {
-            DEBUG_FUNCTION_LINE_ERR("Failed to add category to root item");
-            return WUPSCONFIG_API_CALLBACK_RESULT_ERROR;
-        }
-
-        // add categoryLevel2 to categoryLevel1
-        if (WUPSConfigAPI_Category_AddCategory(root, categoryLevel1) != WUPSCONFIG_API_RESULT_SUCCESS) {
-            DEBUG_FUNCTION_LINE_ERR("Failed to add category to root item");
-            return WUPSCONFIG_API_CALLBACK_RESULT_ERROR;
-        }
-    }
-    {
-        // We can also directly add items to the root category
-        if (WUPSConfigItemStub_AddToCategory(root, "This is stub item without category") !=
-            WUPSCONFIG_API_RESULT_SUCCESS) {
-            DEBUG_FUNCTION_LINE_ERR("Failed to add stub item to root category");
-            return WUPSCONFIG_API_CALLBACK_RESULT_ERROR;
-        }
-        ConfigItemMultipleValuesPair values[10];
-        int numOfElements = sizeof(values) / sizeof(values[0]);
-        for (int i = 0; i < numOfElements; i++) {
-#define STR_SIZE 10
-            char *str = (char *) malloc(STR_SIZE);
-            if (!str) {
-                OSFatal("Failed to allocate memory");
-            }
-            snprintf(str, STR_SIZE, "%d", i);
-            values[i].value     = i;
-            values[i].valueName = str;
-        }
-        WUPSConfigAPIStatus multValuesRes = WUPSConfigItemMultipleValues_AddToCategory(
-                root, "multival", "Multiple values", 0, 0, values, numOfElements, NULL);
-        for (int i = 0; i < sizeof(values) / sizeof(values[0]); i++) {
-            free((void *) values[i].valueName);
-        }
-        if (multValuesRes != WUPSCONFIG_API_RESULT_SUCCESS) {
-            return WUPSCONFIG_API_CALLBACK_RESULT_ERROR;
-        }
-    }
-
-    return WUPSCONFIG_API_CALLBACK_RESULT_SUCCESS;
-}
-
-void ConfigMenuClosedCallback() {
-    WUPSStorageAPI_SaveStorage(false);
-}
 
 void pressDownComboCallback(const WUPSButtonCombo_ControllerTypes triggeredBy, WUPSButtonCombo_ComboHandle, void *) {
     DEBUG_FUNCTION_LINE_INFO("Button combo has been pressed down by controller %s", WUPSButtonComboAPI_GetControllerTypeStr(triggeredBy));
@@ -164,27 +56,7 @@ INITIALIZE_PLUGIN() {
     initLogging();
     DEBUG_FUNCTION_LINE("INITIALIZE_PLUGIN of dominii!");
 
-    WUPSConfigAPIOptionsV1 configOptions = {.name = "dominii"};
-    if (WUPSConfigAPI_Init(configOptions, ConfigMenuOpenedCallback, ConfigMenuClosedCallback) !=
-        WUPSCONFIG_API_RESULT_SUCCESS) {
-        DEBUG_FUNCTION_LINE_ERR("Failed to init config api");
-    }
-
-    WUPSStorageError storageRes;
-    // Try to get value from storage
-    if ((storageRes = WUPSStorageAPI_GetBool(NULL, LOG_FS_OPEN_CONFIG_ID, &logFSOpen)) ==
-        WUPS_STORAGE_ERROR_NOT_FOUND) {
-        // Add the value to the storage if it's missing.
-        if (WUPSStorageAPI_StoreBool(NULL, LOG_FS_OPEN_CONFIG_ID, logFSOpen) != WUPS_STORAGE_ERROR_SUCCESS) {
-            DEBUG_FUNCTION_LINE_ERR("Failed to store bool");
-        }
-    } else if (storageRes != WUPS_STORAGE_ERROR_SUCCESS) {
-        DEBUG_FUNCTION_LINE_ERR("Failed to get bool %s (%d)", WUPSConfigAPI_GetStatusStr(storageRes), storageRes);
-    } else {
-        DEBUG_FUNCTION_LINE_ERR("Successfully read the value from storage: %d %s (%d)", logFSOpen,
-                                WUPSConfigAPI_GetStatusStr(storageRes), storageRes);
-    }
-    WUPSStorageAPI_SaveStorage(false);
+    config_init("dominii");
 
     // To register a button combo, we can use the C++ wrapper class "WUPSButtonComboAPI::ButtonCombo".
     // The combo will be added on construction of that wrapper, and removed again in the destructor. Use `std::move` to move it around.
@@ -372,48 +244,3 @@ ON_APPLICATION_ENDS() {
 ON_APPLICATION_REQUESTS_EXIT() {
     DEBUG_FUNCTION_LINE_INFO("ON_APPLICATION_REQUESTS_EXIT of dominii!");
 }
-
-/**
-    This defines a function replacement.
-    It allows to replace the system function with an own function.
-    So whenever a game / application calls an overridden function, your function gets called instead.
-
-    Currently it's only possible to override functions that are loaded from .rpl files of OSv10 (00050010-1000400A).
-
-    Signature of this macro:
-    DECL_FUNCTION(  RETURN_TYPE, ARBITRARY_NAME_OF_FUNCTION , ARGS_SEPERATED_BY_COMMA){
-        //Your code goes here.
-    }
-
-    Within this macro, two more function get declare you can use.
-    my_ARBITRARY_NAME_OF_FUNCTION and real_ARBITRARY_NAME_OF_FUNCTION
-
-    RETURN_TYPE my_ARBITRARY_NAME_OF_FUNCTION(ARGS_SEPERATED_BY_COMMA):
-        is just name of the function that gets declared in this macro.
-        It has the same effect as calling the overridden function directly.
-
-    RETURN_TYPE real_ARBITRARY_NAME_OF_FUNCTION(ARGS_SEPERATED_BY_COMMA):
-        is the name of the function, that leads to function that was overridden.
-        Use this to call the original function that will be overridden.
-        CAUTION: Other plugins may already have manipulated the return value or arguments.
-
-    Use this macro for each function you want to override
-**/
-DECL_FUNCTION(int, FSOpenFile, FSClient *pClient, FSCmdBlock *pCmd, const char *path, const char *mode, int *handle,
-              int error) {
-    int result = real_FSOpenFile(pClient, pCmd, path, mode, handle, error);
-    if (logFSOpen) {
-        DEBUG_FUNCTION_LINE_INFO("FSOpenFile called for folder %s! Result %d", path, result);
-    }
-    return result;
-}
-
-/**
-This tells the loader which functions from which library (.rpl) should be replaced with which function from this file.
-The list of possible libraries can be found in the wiki. (In general it's WUPS_LOADER_LIBRARY_ + the name of the RPL in caps lock)
-
-WUPS_MUST_REPLACE(FUNCTION_NAME_IN_THIS_FILE,   NAME_OF_LIB_WHICH_CONTAINS_THIS_FUNCTION,   NAME_OF_FUNCTION_TO_OVERRIDE)
-
-Define this for each function you want to override.
-**/
-WUPS_MUST_REPLACE(FSOpenFile, WUPS_LOADER_LIBRARY_COREINIT, FSOpenFile);
