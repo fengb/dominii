@@ -8,38 +8,22 @@ endif
 
 TOPDIR ?= $(CURDIR)
 
-#-------------------------------------------------------------------------------
-# APP_NAME sets the long name of the application
-# APP_SHORTNAME sets the short name of the application
-# APP_AUTHOR sets the author of the application
-#-------------------------------------------------------------------------------
-#APP_NAME	:= Application Name
-#APP_SHORTNAME	:= App Name
-#APP_AUTHOR	:= Built with devkitPPC & wut
+include $(DEVKITPRO)/wups/share/wups_rules
 
-include $(DEVKITPRO)/wut/share/wut_rules
-
+WUT_ROOT := $(DEVKITPRO)/wut
 #-------------------------------------------------------------------------------
 # TARGET is the name of the output
 # BUILD is the directory where object files & intermediate files will be placed
 # SOURCES is a list of directories containing source code
 # DATA is a list of directories containing data files
 # INCLUDES is a list of directories containing header files
-# CONTENT is the path to the bundled folder that will be mounted as /vol/content/
-# ICON is the game icon, leave blank to use default rule
-# TV_SPLASH is the image displayed during bootup on the TV, leave blank to use default rule
-# DRC_SPLASH is the image displayed during bootup on the DRC, leave blank to use default rule
 #-------------------------------------------------------------------------------
-TARGET		:=	app
+TARGET		:=	dominii
 BUILD		:=	build
 DIST		:=	dist
-SOURCES		:=	source
+SOURCES		:=	src
 DATA		:=	data
 INCLUDES	:=	include
-CONTENT		:=
-ICON		:=
-TV_SPLASH	:=
-DRC_SPLASH	:=
 
 #-------------------------------------------------------------------------------
 # options for code generation
@@ -47,20 +31,30 @@ DRC_SPLASH	:=
 CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
 			$(MACHDEP)
 
-CFLAGS	+=	$(INCLUDE) -D__WIIU__ -D__WUT__
+CFLAGS	+=	$(INCLUDE) -D__WIIU__ -D__WUT__ -D__WUPS__ 
 
 CXXFLAGS	:= $(CFLAGS)
 
 ASFLAGS	:=	-g $(ARCH)
-LDFLAGS	=	-g $(ARCH) $(RPXSPECS) -Wl,-Map,$(notdir $*.map)
+LDFLAGS	=	-g $(ARCH) $(RPXSPECS) -Wl,-Map,$(notdir $*.map) $(WUPSSPECS)
 
-LIBS	:= -lwut
+ifeq ($(DEBUG),1)
+CXXFLAGS += -DDEBUG -g
+CFLAGS += -DDEBUG -g
+endif
+
+ifeq ($(DEBUG),VERBOSE)
+CXXFLAGS += -DDEBUG -DVERBOSE_DEBUG -g
+CFLAGS += -DDEBUG -DVERBOSE_DEBUG -g
+endif
+
+LIBS	:= -lwups -lwut
 
 #-------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level
 # containing include and lib
 #-------------------------------------------------------------------------------
-LIBDIRS	:= $(PORTLIBS) $(WUT_ROOT)
+LIBDIRS	:= $(PORTLIBS) $(WUPS_ROOT) $(WUT_ROOT)
 
 #-------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
@@ -108,41 +102,13 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-ifneq (,$(strip $(CONTENT)))
-	export APP_CONTENT := $(TOPDIR)/$(CONTENT)
-endif
-
-ifneq (,$(strip $(ICON)))
-	export APP_ICON := $(TOPDIR)/$(ICON)
-else ifneq (,$(wildcard $(TOPDIR)/$(TARGET).png))
-	export APP_ICON := $(TOPDIR)/$(TARGET).png
-else ifneq (,$(wildcard $(TOPDIR)/icon.png))
-	export APP_ICON := $(TOPDIR)/icon.png
-endif
-
-ifneq (,$(strip $(TV_SPLASH)))
-	export APP_TV_SPLASH := $(TOPDIR)/$(TV_SPLASH)
-else ifneq (,$(wildcard $(TOPDIR)/tv-splash.png))
-	export APP_TV_SPLASH := $(TOPDIR)/tv-splash.png
-else ifneq (,$(wildcard $(TOPDIR)/splash.png))
-	export APP_TV_SPLASH := $(TOPDIR)/splash.png
-endif
-
-ifneq (,$(strip $(DRC_SPLASH)))
-	export APP_DRC_SPLASH := $(TOPDIR)/$(DRC_SPLASH)
-else ifneq (,$(wildcard $(TOPDIR)/drc-splash.png))
-	export APP_DRC_SPLASH := $(TOPDIR)/drc-splash.png
-else ifneq (,$(wildcard $(TOPDIR)/splash.png))
-	export APP_DRC_SPLASH := $(TOPDIR)/splash.png
-endif
-
 .PHONY: $(BUILD) $(OUTDIR) clean all
 
 #-------------------------------------------------------------------------------
 all: $(BUILD)
 
 $(BUILD):
-	mkdir -p $@
+	@mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #-------------------------------------------------------------------------------
@@ -159,13 +125,11 @@ DEPENDS	:=	$(OFILES:.o=.d)
 #-------------------------------------------------------------------------------
 # main targets
 #-------------------------------------------------------------------------------
-all	:	$(OUTPUT).wuhb
-
+all	:	$(OUTPUT).wps
 $(OUTDIR):
-	mkdir -p $@
+	@mkdir -p $@
 
-$(OUTPUT).wuhb	:	$(OUTDIR) $(OUTPUT).rpx
-$(OUTPUT).rpx	:	$(OUTDIR) $(OUTPUT).elf
+$(OUTPUT).wps	:	$(OUTDIR) $(OUTPUT).elf
 $(OUTPUT).elf	:	$(OUTDIR) $(OFILES)
 
 $(OFILES_SRC)	: $(HFILES_BIN)
