@@ -1,3 +1,5 @@
+#include <errno.h>
+
 #include <coreinit/thread.h>
 #include <coreinit/time.h>
 
@@ -82,21 +84,27 @@ static int engine_serve() {
         return 3;
     }
     
-    // Switch socket from non-blocking (set by library) to blocking mode
-    int flags = fcntl(sock, F_GETFL, 0);
-    fcntl(sock, F_SETFL, flags & ~O_NONBLOCK);
-    
-    
     DEBUG_FUNCTION_LINE_INFO("Listening for mDNS traffic on port 5353...");
     
     while (s_engine_running) {
         char recv_buf[2048];
 
         // mdns_socket_listen handles recvfrom and triggers the callback
-        int res = mdns_socket_listen(sock, recv_buf, sizeof(recv_buf), query_callback, NULL);
-        if (res < 0) {
-            // Handle socket error or shutdown
-            break;
+        size_t records = mdns_socket_listen(sock, recv_buf, sizeof(recv_buf), query_callback, NULL);
+        if (records > 0) {
+            continue;
+        }
+
+        switch (errno) {
+            case EWOULDBLOCK:
+            // case EAGAIN: // dupe of EWOULDBLOCK within Wii U
+                // Timeout / no data yet
+                OSSleepTicks(OSMillisecondsToTicks(50));
+                continue;
+            default:
+                // Handle socket error or shutdown
+                mdns_socket_close(sock);
+                return -1;
         }
     }
     
