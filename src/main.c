@@ -12,7 +12,7 @@ static uint8_t s_mdns_thread_stack[65536]; // 64KB stack (adjust as needed)
     Mandatory plugin information.
     If not set correctly, the loader will refuse to use the plugin.
 **/
-WUPS_PLUGIN_NAME("dominii");
+WUPS_PLUGIN_NAME(APP_NAME);
 WUPS_PLUGIN_DESCRIPTION("Description");
 WUPS_PLUGIN_VERSION("v0.1");
 WUPS_PLUGIN_AUTHOR("fengb");
@@ -26,15 +26,15 @@ WUPS_PLUGIN_LICENSE("MIT");
 **/
 
 WUPS_USE_WUT_DEVOPTAB();            // Use the wut devoptabs
-WUPS_USE_STORAGE("dominii"); // Unique id for the storage api
+WUPS_USE_STORAGE(APP_NAME); // Unique id for the storage api
 
 /**
     Gets called ONCE when the plugin was loaded.
 **/
 INITIALIZE_PLUGIN() {
     initLogging();
-    DEBUG_FUNCTION_LINE("INITIALIZE_PLUGIN of dominii!");
-    config_init("dominii"); 
+    DEBUG_FUNCTION_LINE("INITIALIZE_PLUGIN");
+    config_init(); 
 }
 
 /**

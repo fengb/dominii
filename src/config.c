@@ -111,8 +111,8 @@ void ConfigMenuClosedCallback() {
     WUPSStorageAPI_SaveStorage(false);
 }
 
-void config_init(char *name) {
-    WUPSConfigAPIOptionsV1 configOptions = {.name = name};
+void config_init() {
+    WUPSConfigAPIOptionsV1 configOptions = {.name = APP_NAME};
     if (WUPSConfigAPI_Init(configOptions, ConfigMenuOpenedCallback, ConfigMenuClosedCallback) != WUPSCONFIG_API_RESULT_SUCCESS) {
         DEBUG_FUNCTION_LINE_ERR("Failed to init config api");
     }

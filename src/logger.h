@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 #define LOG_APP_TYPE "P"
-#define LOG_APP_NAME "dominii"
+#define LOG_APP_NAME APP_NAME
 
 #define __FILENAME__ ({                                \
     const char *__filename = __FILE__;                 \

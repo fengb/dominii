@@ -31,7 +31,7 @@ INCLUDES	:=	include
 CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
 			$(MACHDEP)
 
-CFLAGS	+=	$(INCLUDE) -D__WIIU__ -D__WUT__ -D__WUPS__ 
+CFLAGS	+=	$(INCLUDE) -D__WIIU__ -D__WUT__ -D__WUPS__ -D'APP_NAME="$(TARGET)"'
 
 CXXFLAGS	:= $(CFLAGS)
 

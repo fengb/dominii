@@ -2,4 +2,4 @@ struct config {
     bool logFSOpen;
 };
 
-void config_init(char *name);
+void config_init();
