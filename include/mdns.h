@@ -982,7 +982,11 @@ mdns_discovery_recv(int sock, void* buffer, size_t capacity, mdns_record_callbac
 static inline size_t
 mdns_socket_listen(int sock, void* buffer, size_t capacity, mdns_record_callback_fn callback,
                    void* user_data) {
+#ifdef __WIIU__
+	struct sockaddr_in addr;
+#else
 	struct sockaddr_in6 addr;
+#endif
 	struct sockaddr* saddr = (struct sockaddr*)&addr;
 	socklen_t addrlen = sizeof(addr);
 	memset(&addr, 0, sizeof(addr));
