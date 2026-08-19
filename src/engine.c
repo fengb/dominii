@@ -116,22 +116,28 @@ static int engine_serve(int sock) {
 
 int engine_start(int argc, const char **argv) {
     s_engine_running = true;
+    unsigned int backoff = 0;
     while (s_engine_running) {
         int sock = engine_connect();
-        if (sock > 0) {
-            int res = engine_serve(sock);
-            mdns_socket_close(sock);
-
-            switch (res) {
-                case 0: break;
-
-                // handle errors
-
-                default:
-                    // Unhandled errors;
-            }
+        if (sock < 0) {
+            OSSleepTicks(OSSecondsToTicks(1ULL << backoff));
+            backoff += (backoff < 6);
+            continue;
         }
-        OSSleepTicks(OSSecondsToTicks(5));
+
+        int res = engine_serve(sock);
+        mdns_socket_close(sock);
+        backoff = 0;
+        OSSleepTicks(OSSecondsToTicks(1ULL));
+
+        switch (res) {
+            case 0: break;
+
+            // handle errors
+
+            default:
+                // Unhandled errors;
+        }
     }
     
     s_engine_running = false;
