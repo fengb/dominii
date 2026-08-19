@@ -57,14 +57,14 @@ query_callback(int sock, const struct sockaddr* from, size_t addrlen,
 }
 
 
-static int engine_serve() {
+static int engine_connect() {
     if (!NNResult_IsSuccess(ACInitialize())) {
-        return 1;
+        return -1;
     }
 
     uint32_t ip_address;
     if (!NNResult_IsSuccess(ACGetAssignedAddress(&ip_address))) {
-        return 2;
+        return -2;
     }
 
     DEBUG_FUNCTION_LINE_INFO("Address: %u.%u.%u.%u:%d\n",
@@ -81,9 +81,13 @@ static int engine_serve() {
     int sock = mdns_socket_open_ipv4(&s_local_ip);
     if (sock < 0) {
         DEBUG_FUNCTION_LINE_ERR("Failed to open IPv4 mDNS socket\n");
-        return 3;
+        return -3;
     }
+
+    return sock;
+}
     
+static int engine_serve(int sock) {
     DEBUG_FUNCTION_LINE_INFO("Listening for mDNS traffic on port 5353...");
     
     while (s_engine_running) {
@@ -103,26 +107,29 @@ static int engine_serve() {
                 continue;
             default:
                 // Handle socket error or shutdown
-                mdns_socket_close(sock);
                 return -1;
         }
     }
     
-    mdns_socket_close(sock);
     return 0;
 }
 
 int engine_start(int argc, const char **argv) {
     s_engine_running = true;
     while (s_engine_running) {
-        int res = engine_serve();
-        switch (res) {
-            case 0: break;
+        int sock = engine_connect();
+        if (sock > 0) {
+            int res = engine_serve(sock);
+            mdns_socket_close(sock);
 
-            // handle errors
+            switch (res) {
+                case 0: break;
 
-            default:
-                // Unhandled errors;
+                // handle errors
+
+                default:
+                    // Unhandled errors;
+            }
         }
         OSSleepTicks(OSSecondsToTicks(5));
     }
