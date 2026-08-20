@@ -14,45 +14,53 @@ static bool s_engine_running = false;
 
 static struct sockaddr_in s_local_ip;
 
+static const mdns_string_t MACHINE_NAME = {
+    .str = "wiiu.local.",
+    .length = 11,
+};
+
 static int
 query_callback(int sock, const struct sockaddr* from, size_t addrlen,
                mdns_entry_type_t entry, uint16_t query_id, uint16_t rtype,
                uint16_t rclass, uint32_t ttl, const void* data, size_t size,
                size_t name_offset, size_t name_length, size_t record_offset,
                size_t record_length, void* user_data) {
+
+    DEBUG_FUNCTION_LINE_INFO("Received mDNS packet");
+
     // We only care about incoming questions asking for A records
     if (entry != MDNS_ENTRYTYPE_QUESTION || rtype != MDNS_RECORDTYPE_A) {
         return 0;
     }
-    
-    char name_buf[256];
-    mdns_string_t queried_name = mdns_string_extract(data, size, &name_offset, name_buf, sizeof(name_buf));
-    
-    if (queried_name.length == 11 && strncasecmp(queried_name.str, "wiiu.local.", 11) == 0) {
-        mdns_record_t answer = {
-            .name = queried_name,
-            .type = MDNS_RECORDTYPE_A,
-            .rclass = 0,
-            .ttl = 120,
-            .data = {
-                .a = {
-                    .addr = s_local_ip
-                }
-            }
-        };
-        
-        char send_buf[1024];
 
-        if (rclass & MDNS_UNICAST_RESPONSE) {
-            mdns_query_answer_unicast(sock, from, addrlen, send_buf, sizeof(send_buf),
-                                      query_id, rtype, queried_name.str, queried_name.length,
-                                      answer, NULL, 0, NULL, 0);
-        } else {
-            mdns_query_answer_multicast(sock, send_buf, sizeof(send_buf), answer, NULL, 0, NULL, 0);
-        }
+    char scratch_buf[256];
+    mdns_string_t queried_name = mdns_string_extract(data, size, &name_offset, scratch_buf, sizeof(scratch_buf));
+    
+    if (queried_name.length != MACHINE_NAME.length &&
+        strncasecmp(queried_name.str, MACHINE_NAME.str, MACHINE_NAME.length) != 0) {
+        return 0;
     }
 
-    DEBUG_FUNCTION_LINE_INFO("Received mDNS query/packet");
+    mdns_record_t answer = {
+        .name = MACHINE_NAME,
+        .type = MDNS_RECORDTYPE_A,
+        .rclass = 0,
+        .ttl = 120,
+        .data = {
+            .a = {
+                .addr = s_local_ip
+            }
+        }
+    };
+
+    if (rclass & MDNS_UNICAST_RESPONSE) {
+        mdns_query_answer_unicast(sock, from, addrlen, scratch_buf, sizeof(scratch_buf),
+                                  query_id, rtype, queried_name.str, queried_name.length,
+                                  answer, NULL, 0, NULL, 0);
+    } else {
+        mdns_query_answer_multicast(sock, scratch_buf, sizeof(scratch_buf), answer, NULL, 0, NULL, 0);
+    }
+
     return 0;
 }
 
