@@ -91,7 +91,7 @@ static int engine_serve(int sock) {
     DEBUG_FUNCTION_LINE_INFO("Listening for mDNS traffic on port 5353...");
     
     while (s_engine_running) {
-        char recv_buf[2048];
+        char recv_buf[1024]; // Max supported size is tested to be 1478
 
         // mdns_socket_listen handles recvfrom and triggers the callback
         size_t records = mdns_socket_listen(sock, recv_buf, sizeof(recv_buf), query_callback, NULL);
