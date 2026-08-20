@@ -28,7 +28,7 @@ query_callback(int sock, const struct sockaddr* from, size_t addrlen,
     char name_buf[256];
     mdns_string_t queried_name = mdns_string_extract(data, size, &name_offset, name_buf, sizeof(name_buf));
     
-    if (queried_name.length == 10 && strncasecmp(queried_name.str, "wiiu.local", 10) == 0) {
+    if (queried_name.length == 11 && strncasecmp(queried_name.str, "wiiu.local.", 11) == 0) {
         mdns_record_t answer = {
             .name = queried_name,
             .type = MDNS_RECORDTYPE_A,
