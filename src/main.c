@@ -18,14 +18,13 @@ WUPS_PLUGIN_VERSION("v0.1");
 WUPS_PLUGIN_AUTHOR("fengb");
 WUPS_PLUGIN_LICENSE("MIT");
 
-
 /**
     All of this defines can be used in ANY file.
     It's possible to split it up into multiple files.
 
 **/
 
-WUPS_USE_WUT_DEVOPTAB();            // Use the wut devoptabs
+WUPS_USE_WUT_DEVOPTAB();    // Use the wut devoptabs
 WUPS_USE_STORAGE(APP_NAME); // Unique id for the storage api
 
 /**
@@ -34,7 +33,7 @@ WUPS_USE_STORAGE(APP_NAME); // Unique id for the storage api
 INITIALIZE_PLUGIN() {
     initLogging();
     DEBUG_FUNCTION_LINE("INITIALIZE_PLUGIN");
-    config_init(); 
+    config_init();
 }
 
 /**
@@ -43,14 +42,14 @@ INITIALIZE_PLUGIN() {
 ON_APPLICATION_START() {
     initLogging();
     bool success = OSCreateThread(
-        &s_mdns_thread,                  // Thread object
-        engine_start,                    // Entry function
-        0,                               // argc
-        NULL,                            // argv
+        &s_mdns_thread,                                    // Thread object
+        engine_start,                                      // Entry function
+        0,                                                 // argc
+        NULL,                                              // argv
         s_mdns_thread_stack + sizeof(s_mdns_thread_stack), // Stack top
-        sizeof(s_mdns_thread_stack),     // Stack size
-        16,                              // Priority (lower number = higher priority, 16 is safe)
-        OS_THREAD_ATTRIB_DETACHED        // Attributes
+        sizeof(s_mdns_thread_stack),                       // Stack size
+        16, // Priority (lower number = higher priority, 16 is safe)
+        OS_THREAD_ATTRIB_DETACHED // Attributes
     );
 
     if (success) {
