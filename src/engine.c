@@ -68,6 +68,11 @@ static int engine_connect() {
         return -2;
     }
 
+    if (ip_address == 0) {
+        DEBUG_FUNCTION_LINE_INFO("No local address (0.0.0.0)");
+        return -3;
+    }
+
     DEBUG_FUNCTION_LINE_INFO(
         "Address: %u.%u.%u.%u:%d\n", (ip_address >> 24) & 0xff,
         (ip_address >> 16) & 0xff, (ip_address >> 8) & 0xff,
@@ -79,8 +84,8 @@ static int engine_connect() {
 
     int sock = mdns_socket_open_ipv4(&s_local_ip);
     if (sock < 0) {
-        DEBUG_FUNCTION_LINE_ERR("Failed to open IPv4 mDNS socket\n");
-        return -3;
+        DEBUG_FUNCTION_LINE_ERR("Failed to open IPv4 mDNS socket");
+        return -4;
     }
 
     return sock;
