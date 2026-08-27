@@ -1,4 +1,3 @@
-#include <arpa/inet.h>
 #include <coreinit/thread.h>
 #include <coreinit/time.h>
 #include <errno.h>
@@ -22,8 +21,6 @@ static int query_callback(int sock, const struct sockaddr *from, size_t addrlen,
                           const void *data, size_t size, size_t name_offset,
                           size_t name_length, size_t record_offset,
                           size_t record_length, void *user_data) {
-    DEBUG_FUNCTION_LINE_INFO("Received mDNS packet");
-
     // We only care about incoming questions asking for A records
     if (entry != MDNS_ENTRYTYPE_QUESTION || rtype != MDNS_RECORDTYPE_A) {
         return 0;
@@ -46,11 +43,16 @@ static int query_callback(int sock, const struct sockaddr *from, size_t addrlen,
                             .data = {.a = {.addr = s_local_ip}}};
 
     if (rclass & MDNS_UNICAST_RESPONSE) {
+        DEBUG_FUNCTION_LINE_INFO(
+            "%.*s => %s", MACHINE_NAME.length, MACHINE_NAME.str,
+            inet_ntoa(((struct sockaddr_in *)from)->sin_addr));
         mdns_query_answer_unicast(sock, from, addrlen, scratch_buf,
                                   sizeof(scratch_buf), query_id, rtype,
                                   queried_name.str, queried_name.length, answer,
                                   NULL, 0, NULL, 0);
     } else {
+        DEBUG_FUNCTION_LINE_INFO("%.*s => multicast", MACHINE_NAME.length,
+                                 MACHINE_NAME.str);
         mdns_query_answer_multicast(sock, scratch_buf, sizeof(scratch_buf),
                                     answer, NULL, 0, NULL, 0);
     }
@@ -73,27 +75,24 @@ static int engine_connect() {
         return -3;
     }
 
-    DEBUG_FUNCTION_LINE_INFO(
-        "Address: %u.%u.%u.%u:%d\n", (ip_address >> 24) & 0xff,
-        (ip_address >> 16) & 0xff, (ip_address >> 8) & 0xff,
-        (ip_address >> 0) & 0xff, MDNS_PORT);
-
     s_local_ip.sin_family = AF_INET;
     s_local_ip.sin_port = htons(MDNS_PORT);
     s_local_ip.sin_addr.s_addr = ip_address;
+
+    DEBUG_FUNCTION_LINE_INFO("Address: %s:%d", inet_ntoa(s_local_ip.sin_addr),
+                             MDNS_PORT);
 
     int sock = mdns_socket_open_ipv4(&s_local_ip);
     if (sock < 0) {
         DEBUG_FUNCTION_LINE_ERR("Failed to open IPv4 mDNS socket");
         return -4;
     }
+    DEBUG_FUNCTION_LINE_INFO("Socket: %d", sock);
 
     return sock;
 }
 
 static int engine_serve(int sock) {
-    DEBUG_FUNCTION_LINE_INFO("Listening for mDNS traffic on port 5353...");
-
     while (s_engine_running) {
         char recv_buf[1024]; // Max supported size is tested to be 1478
 
@@ -111,6 +110,7 @@ static int engine_serve(int sock) {
             OSSleepTicks(OSMillisecondsToTicks(50));
             continue;
         default:
+            DEBUG_FUNCTION_LINE_ERR("Listen errno: %d", errno);
             // Handle socket error or shutdown
             return -1;
         }
