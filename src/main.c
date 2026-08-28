@@ -1,7 +1,6 @@
 #include <coreinit/thread.h>
 #include <wups.h>
 
-#include "config.h"
 #include "engine.h"
 #include "logger.h"
 
@@ -26,15 +25,6 @@ WUPS_PLUGIN_LICENSE("MIT");
 
 WUPS_USE_WUT_DEVOPTAB();    // Use the wut devoptabs
 WUPS_USE_STORAGE(APP_NAME); // Unique id for the storage api
-
-/**
-    Gets called ONCE when the plugin was loaded.
-**/
-INITIALIZE_PLUGIN() {
-    initLogging();
-    DEBUG_FUNCTION_LINE("INITIALIZE_PLUGIN");
-    config_init();
-}
 
 /**
     Gets called when an application starts.
