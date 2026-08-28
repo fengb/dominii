@@ -131,19 +131,12 @@ int engine_start(int argc, const char **argv) {
         }
 
         int res = engine_serve(sock);
-        mdns_socket_close(sock);
+        if (fcntl(sock, F_GETFL) >= 0) {
+            // Close the socket if it's still alive
+            mdns_socket_close(sock);
+        }
         backoff = 0;
         OSSleepTicks(OSSecondsToTicks(1ULL));
-
-        switch (res) {
-        case 0:
-            break;
-
-            // handle errors
-
-        default:
-            // Unhandled errors;
-        }
     }
 
     s_engine_running = false;
