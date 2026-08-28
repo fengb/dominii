@@ -33,8 +33,8 @@ static int query_callback(int sock, const struct sockaddr *from, size_t addrlen,
         data, size, &name_offset, scratch_buf, sizeof(scratch_buf));
 
     if (queried_name.length != s_machine_name.length &&
-        strncasecmp(queried_name.str, s_machine_name.str, s_machine_name.length) !=
-            0) {
+        strncasecmp(queried_name.str, s_machine_name.str,
+                    s_machine_name.length) != 0) {
         return 0;
     }
 
@@ -127,10 +127,12 @@ int engine_start(int argc, const char **argv) {
         DEBUG_FUNCTION_LINE_ERR("Cannot load hostname?");
         return -1;
     }
+    s_machine_name.length = len;
+    DEBUG_FUNCTION_LINE_INFO("Hostname: %.*s", len, s_machine_name.str);
 
     s_engine_running = true;
     unsigned int backoff = 0;
-    
+
     while (s_engine_running) {
         int sock = engine_connect();
         if (sock < 0) {

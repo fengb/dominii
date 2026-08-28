@@ -48,13 +48,13 @@ CXXFLAGS += -DDEBUG -DVERBOSE_DEBUG -g
 CFLAGS += -DDEBUG -DVERBOSE_DEBUG -g
 endif
 
-LIBS	:= -lwups -lwut
+LIBS	:= -lwups -lwut -lmocha
 
 #-------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level
 # containing include and lib
 #-------------------------------------------------------------------------------
-LIBDIRS	:= $(PORTLIBS) $(WUPS_ROOT) $(WUT_ROOT)
+LIBDIRS	:= $(PORTLIBS) $(WUPS_ROOT) $(WUT_ROOT) $(WUT_ROOT)/usr
 
 #-------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
@@ -78,9 +78,10 @@ SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
 
 #-------------------------------------------------------------------------------
-# use CXX for linking C++ projects, CC for standard C
+# Need CXX for libmocha
 #-------------------------------------------------------------------------------
-ifeq ($(strip $(CPPFILES)),)
+# ifeq ($(strip $(CPPFILES)),)
+ifeq (A,B)
 #-------------------------------------------------------------------------------
 	export LD	:=	$(CC)
 #-------------------------------------------------------------------------------
