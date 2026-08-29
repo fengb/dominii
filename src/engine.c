@@ -32,7 +32,7 @@ static int query_callback(int sock, const struct sockaddr *from, size_t addrlen,
     mdns_string_t queried_name = mdns_string_extract(
         data, size, &name_offset, scratch_buf, sizeof(scratch_buf));
 
-    if (queried_name.length != s_machine_name.length &&
+    if (queried_name.length != s_machine_name.length ||
         strncasecmp(queried_name.str, s_machine_name.str,
                     s_machine_name.length) != 0) {
         return 0;
