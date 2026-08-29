@@ -1,0 +1,1 @@
+ssize_t hostname_load(char buf[], size_t size);

@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <nn/ac.h>
 
+#include "hostname.h"
 #include "logger.h"
 #include "mdns_ipv4_shim.h"
 
@@ -10,9 +11,10 @@ static bool s_engine_running = false;
 
 static struct sockaddr_in s_local_ip;
 
-static const mdns_string_t MACHINE_NAME = {
-    .str = "wiiu.local.",
-    .length = 11,
+static char s_name_buf[20];
+static mdns_string_t s_machine_name = {
+    .str = s_name_buf,
+    .length = 0,
 };
 
 static int query_callback(int sock, const struct sockaddr *from, size_t addrlen,
@@ -30,13 +32,13 @@ static int query_callback(int sock, const struct sockaddr *from, size_t addrlen,
     mdns_string_t queried_name = mdns_string_extract(
         data, size, &name_offset, scratch_buf, sizeof(scratch_buf));
 
-    if (queried_name.length != MACHINE_NAME.length &&
-        strncasecmp(queried_name.str, MACHINE_NAME.str, MACHINE_NAME.length) !=
-            0) {
+    if (queried_name.length != s_machine_name.length &&
+        strncasecmp(queried_name.str, s_machine_name.str,
+                    s_machine_name.length) != 0) {
         return 0;
     }
 
-    mdns_record_t answer = {.name = MACHINE_NAME,
+    mdns_record_t answer = {.name = s_machine_name,
                             .type = MDNS_RECORDTYPE_A,
                             .rclass = 0,
                             .ttl = 120,
@@ -44,15 +46,15 @@ static int query_callback(int sock, const struct sockaddr *from, size_t addrlen,
 
     if (rclass & MDNS_UNICAST_RESPONSE) {
         DEBUG_FUNCTION_LINE_INFO(
-            "%.*s => %s", MACHINE_NAME.length, MACHINE_NAME.str,
+            "%.*s => %s", s_machine_name.length, s_machine_name.str,
             inet_ntoa(((struct sockaddr_in *)from)->sin_addr));
         mdns_query_answer_unicast(sock, from, addrlen, scratch_buf,
                                   sizeof(scratch_buf), query_id, rtype,
                                   queried_name.str, queried_name.length, answer,
                                   NULL, 0, NULL, 0);
     } else {
-        DEBUG_FUNCTION_LINE_INFO("%.*s => multicast", MACHINE_NAME.length,
-                                 MACHINE_NAME.str);
+        DEBUG_FUNCTION_LINE_INFO("%.*s => multicast", s_machine_name.length,
+                                 s_machine_name.str);
         mdns_query_answer_multicast(sock, scratch_buf, sizeof(scratch_buf),
                                     answer, NULL, 0, NULL, 0);
     }
@@ -120,8 +122,17 @@ static int engine_serve(int sock) {
 }
 
 int engine_start(int argc, const char **argv) {
+    ssize_t len = hostname_load(s_name_buf, sizeof(s_name_buf));
+    if (len <= 0) {
+        DEBUG_FUNCTION_LINE_ERR("Cannot load hostname?");
+        return -1;
+    }
+    s_machine_name.length = len;
+    DEBUG_FUNCTION_LINE_INFO("Hostname: %.*s", len, s_machine_name.str);
+
     s_engine_running = true;
     unsigned int backoff = 0;
+
     while (s_engine_running) {
         int sock = engine_connect();
         if (sock < 0) {
