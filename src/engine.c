@@ -7,6 +7,8 @@
 #include "logger.h"
 #include "mdns_ipv4_shim.h"
 
+static OSThread s_engine_thread;
+static uint8_t s_engine_thread_stack[65536]; // 64KB stack (adjust as needed)
 static bool s_engine_running = false;
 
 static struct sockaddr_in s_local_ip;
@@ -121,7 +123,7 @@ static int engine_serve(int sock) {
     return 0;
 }
 
-int engine_start(int argc, const char **argv) {
+static int engine_main(int argc, const char **argv) {
     ssize_t len = hostname_load(s_name_buf, sizeof(s_name_buf));
     if (len <= 0) {
         DEBUG_FUNCTION_LINE_ERR("Cannot load hostname?");
@@ -151,6 +153,25 @@ int engine_start(int argc, const char **argv) {
     }
 
     s_engine_running = false;
+    return 0;
+}
+
+int engine_start() {
+    bool success = OSCreateThread(
+        &s_engine_thread,                                      // Thread object
+        engine_main,                                           // Entry function
+        0,                                                     // argc
+        NULL,                                                  // argv
+        s_engine_thread_stack + sizeof(s_engine_thread_stack), // Stack top
+        sizeof(s_engine_thread_stack),                         // Stack size
+        16, // Priority (lower number = higher priority, 16 is safe)
+        OS_THREAD_ATTRIB_DETACHED // Attributes
+    );
+
+    if (success) {
+        OSResumeThread(&s_engine_thread);
+    }
+
     return 0;
 }
 

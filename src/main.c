@@ -1,11 +1,7 @@
-#include <coreinit/thread.h>
 #include <wups.h>
 
 #include "engine.h"
 #include "logger.h"
-
-static OSThread s_mdns_thread;
-static uint8_t s_mdns_thread_stack[65536]; // 64KB stack (adjust as needed)
 
 /**
     Mandatory plugin information.
@@ -31,20 +27,7 @@ WUPS_USE_STORAGE(APP_NAME); // Unique id for the storage api
 **/
 ON_APPLICATION_START() {
     initLogging();
-    bool success = OSCreateThread(
-        &s_mdns_thread,                                    // Thread object
-        engine_start,                                      // Entry function
-        0,                                                 // argc
-        NULL,                                              // argv
-        s_mdns_thread_stack + sizeof(s_mdns_thread_stack), // Stack top
-        sizeof(s_mdns_thread_stack),                       // Stack size
-        16, // Priority (lower number = higher priority, 16 is safe)
-        OS_THREAD_ATTRIB_DETACHED // Attributes
-    );
-
-    if (success) {
-        OSResumeThread(&s_mdns_thread);
-    }
+    engine_start();
 }
 
 /**
