@@ -1,3 +1,4 @@
+#include <coreinit/event.h>
 #include <coreinit/thread.h>
 #include <coreinit/time.h>
 #include <errno.h>
@@ -9,7 +10,9 @@
 
 static OSThread s_engine_thread;
 static uint8_t s_engine_thread_stack[65536]; // 64KB stack (adjust as needed)
+
 static bool s_engine_running = false;
+static OSEvent s_stop_event;
 
 static struct sockaddr_in s_local_ip;
 
@@ -111,7 +114,7 @@ static int engine_serve(int sock) {
         case EWOULDBLOCK:
             // case EAGAIN: // dupe of EWOULDBLOCK within Wii U
             // Timeout / no data yet
-            OSSleepTicks(OSMillisecondsToTicks(50));
+            OSWaitEventWithTimeout(&s_stop_event, OSMillisecondsToTicks(50));
             continue;
         default:
             DEBUG_FUNCTION_LINE_ERR("Listen errno: %d", errno);
@@ -138,25 +141,29 @@ static int engine_main(int argc, const char **argv) {
     while (s_engine_running) {
         int sock = engine_connect();
         if (sock < 0) {
-            OSSleepTicks(OSSecondsToTicks(1ULL << backoff));
+            OSWaitEventWithTimeout(&s_stop_event,
+                                   OSSecondsToTicks(1ULL << backoff));
             backoff += (backoff < 6);
             continue;
         }
 
         int res = engine_serve(sock);
-        if (fcntl(sock, F_GETFL) >= 0) {
-            // Close the socket if it's still alive
-            mdns_socket_close(sock);
-        }
+        mdns_socket_close(sock);
         backoff = 0;
-        OSSleepTicks(OSSecondsToTicks(1ULL));
+        OSWaitEventWithTimeout(&s_stop_event, OSSecondsToTicks(1ULL));
     }
 
     s_engine_running = false;
     return 0;
 }
 
+int engine_init() {
+    OSInitEvent(&s_stop_event, FALSE, OS_EVENT_MODE_MANUAL);
+    return 0;
+}
+
 int engine_start() {
+    OSResetEvent(&s_stop_event);
     bool success = OSCreateThread(
         &s_engine_thread,                                      // Thread object
         engine_main,                                           // Entry function
@@ -177,5 +184,6 @@ int engine_start() {
 
 int engine_stop() {
     s_engine_running = false;
+    OSSignalEvent(&s_stop_event);
     return 0;
 }
