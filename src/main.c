@@ -31,9 +31,9 @@ ON_APPLICATION_START() {
 }
 
 /**
- * Gets called when an application actually ends
- */
-ON_APPLICATION_ENDS() {
+    Gets called when an application request to exit.
+**/
+ON_APPLICATION_REQUESTS_EXIT() {
     engine_stop();
     deinitLogging();
 }
