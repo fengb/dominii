@@ -23,6 +23,13 @@ WUPS_USE_WUT_DEVOPTAB();    // Use the wut devoptabs
 WUPS_USE_STORAGE(APP_NAME); // Unique id for the storage api
 
 /**
+    Gets called ONCE when the plugin was loaded.
+**/
+INITIALIZE_PLUGIN() {
+    engine_init();
+}
+
+/**
     Gets called when an application starts.
 **/
 ON_APPLICATION_START() {

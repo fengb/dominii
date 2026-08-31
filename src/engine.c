@@ -127,14 +127,6 @@ static int engine_serve(int sock) {
 }
 
 static int engine_main(int argc, const char **argv) {
-    ssize_t len = hostname_load(s_name_buf, sizeof(s_name_buf));
-    if (len <= 0) {
-        DEBUG_FUNCTION_LINE_ERR("Cannot load hostname?");
-        return -1;
-    }
-    s_machine_name.length = len;
-    DEBUG_FUNCTION_LINE_INFO("Hostname: %.*s", len, s_machine_name.str);
-
     s_engine_running = true;
     unsigned int backoff = 0;
 
@@ -159,11 +151,21 @@ static int engine_main(int argc, const char **argv) {
 
 int engine_init() {
     OSInitEvent(&s_stop_event, FALSE, OS_EVENT_MODE_MANUAL);
+
+    ssize_t len = hostname_load(s_name_buf, sizeof(s_name_buf));
+    if (len <= 0) {
+        DEBUG_FUNCTION_LINE_ERR("Cannot load hostname?");
+        return -1;
+    }
+    s_machine_name.length = len;
+    DEBUG_FUNCTION_LINE_INFO("Hostname: %.*s", len, s_machine_name.str);
+
     return 0;
 }
 
 int engine_start() {
     OSResetEvent(&s_stop_event);
+
     bool success = OSCreateThread(
         &s_engine_thread,                                      // Thread object
         engine_main,                                           // Entry function
